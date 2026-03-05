@@ -5,7 +5,11 @@ import {
 } from "../rect";
 
 export class Rect {
-    private state: RectState;
+    private _state: RectState;
+
+    get state() {
+        return this._state;
+    }
 
     constructor(
         x: number,
@@ -14,10 +18,10 @@ export class Rect {
         height: number,
         color = "white"
     ) {
-        this.state = createRect(x, y, width, height, color);
+        this._state = createRect(x, y, width, height, color);
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        renderRect(this.state, ctx);
+        renderRect(this._state, ctx);
     }
 }

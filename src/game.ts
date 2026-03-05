@@ -1,6 +1,7 @@
 import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
 import { Rect } from "./oop/rect";
+import { resolvePlayerRectCollisions } from "./collision";
 
 export type GameState = {
     renderer: Renderer;
@@ -20,7 +21,7 @@ export function createGame(
         input,
         audio,
         player: new Player(),
-        conveyorBelt: new Rect(400, 200, 120, 80, "blue")
+        conveyorBelt: new Rect(400, 200, 500, 80, "blue")
     };
 }
 
@@ -33,6 +34,11 @@ export function updateGame(
     if (moved) {
         state.audio.play("move");
     }
+
+    resolvePlayerRectCollisions(
+        state.player.state,
+        [state.conveyorBelt.state]
+    );
 }
 
 export function renderGame(

@@ -7,7 +7,7 @@ It is rewritten from light-engine-oop.
 
 - [**Configuration**](#configuration)
 - [**Prototyping**](#prototyping)
-  * [**Player**](#player) **/** [**Rect**](#rect)
+  * [**Player**](#player) **/** [**Rect**](#rect) **/** [**Collision**](#collision)
 - [**Page**](#page)
   * [**Index**](#index) **/** [**Style**](#style)
 - [**Game**](#game)
@@ -209,17 +209,20 @@ export function renderPlayer(
 src/oop/player.ts
 
 ```ts
+import { Input } from "light-engine-procedural";
 import {
-    PlayerState,
+    type PlayerState,
     createPlayer,
     updatePlayer,
     renderPlayer
 } from "../player";
 
-import { Input } from "minimal-engine-lib";
-
 export class Player {
-    private state: PlayerState;
+    private _state: PlayerState;
+
+    get state() {
+        return this._state;
+    }
 
     constructor(
         x = 100,
@@ -227,31 +230,31 @@ export class Player {
         speed = 200,
         size = 50
     ) {
-        this.state = createPlayer(x, y, speed, size);
+        this._state = createPlayer(x, y, speed, size);
     }
 
     update(dt: number, input: Input) {
-        return updatePlayer(this.state, dt, input);
+        return updatePlayer(this._state, dt, input);
     }
 
     render(ctx: CanvasRenderingContext2D, alpha: number) {
-        renderPlayer(this.state, ctx, alpha);
+        renderPlayer(this._state, ctx, alpha);
     }
 
     get x() {
-        return this.state.x;
+        return this._state.x;
     }
 
     get y() {
-        return this.state.y;
+        return this._state.y;
     }
 
     set x(value: number) {
-        this.state.x = value;
+        this._state.x = value;
     }
 
     set y(value: number) {
-        this.state.y = value;
+        this._state.y = value;
     }
 }
 ```
@@ -305,13 +308,17 @@ src/oop/rect.ts
 
 ```ts
 import {
-    RectState,
+    type RectState,
     createRect,
     renderRect
 } from "../rect";
 
 export class Rect {
-    private state: RectState;
+    private _state: RectState;
+
+    get state() {
+        return this._state;
+    }
 
     constructor(
         x: number,
@@ -320,11 +327,65 @@ export class Rect {
         height: number,
         color = "white"
     ) {
-        this.state = createRect(x, y, width, height, color);
+        this._state = createRect(x, y, width, height, color);
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        renderRect(this.state, ctx);
+        renderRect(this._state, ctx);
+    }
+}
+```
+
+[⬆ Table of Contents](#toc)
+
+### Collision <a id="collision"></a>
+
+src/collision.ts  
+
+AABB Helper  
+
+```ts
+import { type PlayerState } from "./player";
+import { type RectState } from "./rect";
+
+function intersects(
+    px: number,
+    py: number,
+    ps: number,
+    rect: RectState
+) {
+    return (
+        px < rect.x + rect.width &&
+        px + ps > rect.x &&
+        py < rect.y + rect.height &&
+        py + ps > rect.y
+    );
+}
+
+export function resolvePlayerRectCollisions(
+    player: PlayerState,
+    rects: RectState[]
+) {
+    const size = player.size;
+
+    for (const rect of rects) {
+        if (!intersects(player.x, player.y, size, rect)) continue;
+
+        if (player.x > player.prevX) {
+            player.x = rect.x - size;
+        } else if (player.x < player.prevX) {
+            player.x = rect.x + rect.width;
+        }
+    }
+
+    for (const rect of rects) {
+        if (!intersects(player.x, player.y, size, rect)) continue;
+
+        if (player.y > player.prevY) {
+            player.y = rect.y - size;
+        } else if (player.y < player.prevY) {
+            player.y = rect.y + rect.height;
+        }
     }
 }
 ```
@@ -414,6 +475,7 @@ Procedural game but uses oop wrappers.
 import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
 import { Rect } from "./oop/rect";
+import { resolvePlayerRectCollisions } from "./collision";
 
 export type GameState = {
     renderer: Renderer;
@@ -433,7 +495,7 @@ export function createGame(
         input,
         audio,
         player: new Player(),
-        conveyorBelt: new Rect(400, 200, 120, 80, "blue")
+        conveyorBelt: new Rect(400, 200, 500, 80, "blue")
     };
 }
 
@@ -446,6 +508,11 @@ export function updateGame(
     if (moved) {
         state.audio.play("move");
     }
+
+    resolvePlayerRectCollisions(
+        state.player.state,
+        [state.conveyorBelt.state]
+    );
 }
 
 export function renderGame(
