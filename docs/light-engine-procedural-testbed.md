@@ -7,7 +7,7 @@ It is rewritten from light-engine-oop.
 
 - [**Configuration**](#configuration)
 - [**Prototyping**](#prototyping)
-  * [**Player**](#player)
+  * [**Player**](#player) **/** [**Rect**](#rect)
 - [**Page**](#page)
   * [**Index**](#index) **/** [**Style**](#style)
 - [**Game**](#game)
@@ -258,6 +258,79 @@ export class Player {
 
 [⬆ Table of Contents](#toc)
 
+### Rect <a id="rect"></a>
+
+src/rect.ts  
+
+```ts
+export type RectState = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+};
+
+export function createRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color = "white"
+): RectState {
+    return {
+        x,
+        y,
+        width,
+        height,
+        color
+    };
+}
+
+export function renderRect(
+    rect: RectState,
+    ctx: CanvasRenderingContext2D
+) {
+    ctx.fillStyle = rect.color;
+    ctx.fillRect(
+        rect.x,
+        rect.y,
+        rect.width,
+        rect.height
+    );
+}
+```
+
+src/oop/rect.ts
+
+```ts
+import {
+    RectState,
+    createRect,
+    renderRect
+} from "../rect";
+
+export class Rect {
+    private state: RectState;
+
+    constructor(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        color = "white"
+    ) {
+        this.state = createRect(x, y, width, height, color);
+    }
+
+    render(ctx: CanvasRenderingContext2D) {
+        renderRect(this.state, ctx);
+    }
+}
+```
+
+[⬆ Table of Contents](#toc)
+
 ## Page <a id="page"></a>
 
 ### Index <a id="index"></a>
@@ -329,9 +402,9 @@ canvas {
 
 ## Game <a id="game"></a>
 
-## Game Logic <a id="game-logic"></a>
+### Game Logic <a id="game-logic"></a>
 
-### Procedural Game
+#### Procedural Game
 
 src/game.ts  
 
@@ -340,12 +413,14 @@ Procedural game but uses oop wrappers.
 ```ts
 import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
+import { Rect } from "./oop/rect";
 
 export type GameState = {
     renderer: Renderer;
     input: Input;
     audio: Audio;
     player: Player;
+    conveyorBelt: Rect;
 };
 
 export function createGame(
@@ -357,7 +432,8 @@ export function createGame(
         renderer,
         input,
         audio,
-        player: new Player()
+        player: new Player(),
+        conveyorBelt: new Rect(400, 200, 120, 80, "blue")
     };
 }
 
@@ -377,7 +453,7 @@ export function renderGame(
     alpha: number
 ) {
     state.renderer.clear();
-
+    state.conveyorBelt.render(state.renderer.ctx);
     state.player.render(
         state.renderer.ctx,
         alpha
@@ -391,7 +467,7 @@ export function startGameMusic(state: GameState) {
 
 [⬆ Table of Contents](#toc)
 
-### OOP Game
+#### OOP Game
 
 src/oop/game.ts  
 
@@ -432,7 +508,7 @@ export class Game implements IGame {
 
 [⬆ Table of Contents](#toc)
 
-## Main <a id="main"></a>
+### Main <a id="main"></a>
 
 Creates and runs engine and game.  
 
