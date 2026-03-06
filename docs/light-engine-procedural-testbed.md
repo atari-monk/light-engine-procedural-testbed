@@ -7,7 +7,7 @@ It is rewritten from light-engine-oop.
 
 - [**Configuration**](#configuration)
 - [**Prototyping**](#prototyping)
-  * [**Player**](#player) **/** [**Rect**](#rect) **/** [**Collision**](#collision)
+  * [**Player**](#player) **/** [**Rect**](#rect) **/** [**Collision**](#collision) **/** [**Box**](#box)
 - [**Page**](#page)
   * [**Index**](#index) **/** [**Style**](#style)
 - [**Game**](#game)
@@ -139,8 +139,8 @@ export type PlayerState = {
 };
 
 export function createPlayer(
-    x = 100,
-    y = 200,
+    x = 960 - 25,
+    y = 350,
     speed = 200,
     size = 50
 ): PlayerState {
@@ -225,8 +225,8 @@ export class Player {
     }
 
     constructor(
-        x = 100,
-        y = 200,
+        x = 960 - 25,
+        y = 350,
         speed = 200,
         size = 50
     ) {
@@ -392,6 +392,60 @@ export function resolvePlayerRectCollisions(
 
 [⬆ Table of Contents](#toc)
 
+### Box <a id="box"></a>
+
+```ts
+import {
+    type RectState,
+    createRect,
+    renderRect
+} from "./rect";
+
+export type BoxState = RectState & {
+    speed: number;
+};
+
+export function createBox(
+    x: number,
+    y: number,
+    size = 20,
+    speed = 40
+): BoxState {
+    return {
+        ...createRect(
+            x,
+            y,
+            size,
+            size,
+            "rgba(255,0,0,.5)"
+        ),
+        speed
+    };
+}
+
+export function updateBox(
+    box: BoxState,
+    dt: number,
+    startX: number,
+    endX: number
+) {
+    box.x += box.speed * dt;
+
+    if (box.x > endX) {
+        box.x = startX;
+    }
+}
+
+export function renderBox(
+    box: BoxState,
+    ctx: CanvasRenderingContext2D
+) {
+    renderRect(box, ctx);
+}
+```
+
+[⬆ Table of Contents](#toc)
+
 ## Page <a id="page"></a>
 
 ### Index <a id="index"></a>
@@ -476,6 +530,8 @@ import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
 import { Rect } from "./oop/rect";
 import { resolvePlayerRectCollisions } from "./collision";
+import { createBox, renderBox, updateBox, type BoxState } from "./box";
+import type { RectState } from "./rect";
 
 export type GameState = {
     renderer: Renderer;
@@ -483,6 +539,12 @@ export type GameState = {
     audio: Audio;
     player: Player;
     conveyorBelt: Rect;
+    leftGate: Rect;
+    rightGate: Rect;
+    boxes: BoxState[];
+    colliders: RectState[];
+    conveyorStartX: number;
+    conveyorEndX: number;
 };
 
 export function createGame(
@@ -490,12 +552,37 @@ export function createGame(
     input: Input,
     audio: Audio
 ): GameState {
+    const boxes = [
+        createBox(960 - 250 - 50 - 10, 200),
+        createBox(960 - 250 - 50 - 10, 220),
+        createBox(960 - 250 - 50 - 10, 240),
+        createBox(960 - 250 - 50 - 10, 260)
+    ];
+
+    const conveyorBelt = new Rect(960 - 350, 200, 700, 80, "blue");
+    const leftGate = new Rect(960 - 250 - 100, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
+    const rightGate = new Rect(960 + 250, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
+
+    const conveyorStartX = leftGate.state.x + leftGate.state.width / 2;
+    const conveyorEndX = rightGate.state.x + rightGate.state.width / 2;
+
     return {
         renderer,
         input,
         audio,
         player: new Player(),
-        conveyorBelt: new Rect(400, 200, 500, 80, "blue")
+        conveyorBelt,
+        leftGate,
+        rightGate,
+        boxes,
+        colliders: [
+            conveyorBelt.state,
+            leftGate.state,
+            rightGate.state,
+            ...boxes
+        ],
+        conveyorStartX,
+        conveyorEndX
     };
 }
 
@@ -509,9 +596,13 @@ export function updateGame(
         state.audio.play("move");
     }
 
+    for (const box of state.boxes) {
+        updateBox(box, dt, state.conveyorStartX, state.conveyorEndX);
+    }
+
     resolvePlayerRectCollisions(
         state.player.state,
-        [state.conveyorBelt.state]
+        state.colliders
     );
 }
 
@@ -521,6 +612,11 @@ export function renderGame(
 ) {
     state.renderer.clear();
     state.conveyorBelt.render(state.renderer.ctx);
+    state.leftGate.render(state.renderer.ctx);
+    state.rightGate.render(state.renderer.ctx);
+    for (const box of state.boxes) {
+        renderBox(box, state.renderer.ctx);
+    }
     state.player.render(
         state.renderer.ctx,
         alpha

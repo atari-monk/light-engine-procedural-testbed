@@ -14,8 +14,8 @@ export class Player {
     }
 
     constructor(
-        x = 100,
-        y = 200,
+        x = 960 - 25,
+        y = 350,
         speed = 200,
         size = 50
     ) {
