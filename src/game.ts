@@ -30,7 +30,7 @@ export function createGame(
 
     const conveyorStartX = leftGate.state.x + leftGate.state.width / 2;
     const conveyorEndX = rightGate.state.x + rightGate.state.width / 2;
-    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX, 1.0);
+    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX);
 
     return {
         renderer,

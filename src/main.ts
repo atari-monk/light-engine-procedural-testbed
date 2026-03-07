@@ -26,11 +26,11 @@ overlay?.addEventListener("click", async () => {
     canvas.style.display = "block";
 
     await audio.playMusicAfterGesture("bg", 0.5);
+
+    const loop = new GameLoop(
+        (dt) => game.update(dt),
+        (alpha) => game.render(alpha)
+    );
+
+    loop.start();
 });
-
-const loop = new GameLoop(
-    (dt) => game.update(dt),
-    (alpha) => game.render(alpha)
-);
-
-loop.start();

@@ -448,6 +448,8 @@ export function renderBox(
 
 ### Box Factory <a id="box-factory"></a>
 
+It keeps box count on conveyor to max 6.  
+
 ```ts
 import { createBox, renderBox, updateBox, type BoxState } from "./box";
 
@@ -464,7 +466,7 @@ export type BoxFactoryState = {
 export function createBoxFactory(
     startX: number,
     endX: number,
-    spawnInterval = 1.0
+    spawnInterval = 1.5
 ): BoxFactoryState {
     return {
         boxes: [],
@@ -483,10 +485,11 @@ export function updateBoxFactory(factory: BoxFactoryState, dt: number) {
     factory.boxes = factory.boxes.filter(box => box.x < factory.conveyorEndX);
 
     factory.spawnTimer += dt;
-    if (factory.spawnTimer >= factory.spawnInterval) {
+
+    while (factory.spawnTimer >= factory.spawnInterval && factory.boxes.length < 6) {
         factory.spawnTimer -= factory.spawnInterval;
 
-        const laneIndex = Math.floor(Math.random() * 4);
+        const laneIndex = Math.floor(Math.random() * LANES_Y.length);
         const y = LANES_Y[laneIndex];
         const box = createBox(factory.conveyorStartX, y, 20, 80);
         factory.boxes.push(box);
@@ -614,7 +617,7 @@ export function createGame(
 
     const conveyorStartX = leftGate.state.x + leftGate.state.width / 2;
     const conveyorEndX = rightGate.state.x + rightGate.state.width / 2;
-    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX, 1.0);
+    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX);
 
     return {
         renderer,
@@ -750,14 +753,14 @@ overlay?.addEventListener("click", async () => {
     canvas.style.display = "block";
 
     await audio.playMusicAfterGesture("bg", 0.5);
+
+    const loop = new GameLoop(
+        (dt) => game.update(dt),
+        (alpha) => game.render(alpha)
+    );
+
+    loop.start();
 });
-
-const loop = new GameLoop(
-    (dt) => game.update(dt),
-    (alpha) => game.render(alpha)
-);
-
-loop.start();
 ```
 
 [⬆ Table of Contents](#toc)

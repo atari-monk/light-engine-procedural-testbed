@@ -13,7 +13,7 @@ export type BoxFactoryState = {
 export function createBoxFactory(
     startX: number,
     endX: number,
-    spawnInterval = 1.0
+    spawnInterval = 1.5
 ): BoxFactoryState {
     return {
         boxes: [],
@@ -32,10 +32,11 @@ export function updateBoxFactory(factory: BoxFactoryState, dt: number) {
     factory.boxes = factory.boxes.filter(box => box.x < factory.conveyorEndX);
 
     factory.spawnTimer += dt;
-    if (factory.spawnTimer >= factory.spawnInterval) {
+
+    while (factory.spawnTimer >= factory.spawnInterval && factory.boxes.length < 6) {
         factory.spawnTimer -= factory.spawnInterval;
 
-        const laneIndex = Math.floor(Math.random() * 4);
+        const laneIndex = Math.floor(Math.random() * LANES_Y.length);
         const y = LANES_Y[laneIndex];
         const box = createBox(factory.conveyorStartX, y, 20, 80);
         factory.boxes.push(box);
