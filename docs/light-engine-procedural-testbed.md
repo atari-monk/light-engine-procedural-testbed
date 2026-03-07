@@ -7,7 +7,7 @@ It is rewritten from light-engine-oop.
 
 - [**Configuration**](#configuration)
 - [**Prototyping**](#prototyping)
-  * [**Player**](#player) **/** [**Rect**](#rect) **/** [**Collision**](#collision) **/** [**Box**](#box)
+  * [**Player**](#player) **/** [**Rect**](#rect) **/** [**Collision**](#collision) **/** [**Box**](#box) **/** [**Box Factory**](#box-factory)
 - [**Page**](#page)
   * [**Index**](#index) **/** [**Style**](#style)
 - [**Game**](#game)
@@ -446,6 +446,62 @@ export function renderBox(
 
 [⬆ Table of Contents](#toc)
 
+### Box Factory <a id="box-factory"></a>
+
+```ts
+import { createBox, renderBox, updateBox, type BoxState } from "./box";
+
+const LANES_Y = [200, 220, 240, 260];
+
+export type BoxFactoryState = {
+    boxes: BoxState[];
+    conveyorStartX: number;
+    conveyorEndX: number;
+    spawnInterval: number;
+    spawnTimer: number;
+};
+
+export function createBoxFactory(
+    startX: number,
+    endX: number,
+    spawnInterval = 1.0
+): BoxFactoryState {
+    return {
+        boxes: [],
+        conveyorStartX: startX,
+        conveyorEndX: endX,
+        spawnInterval,
+        spawnTimer: 0
+    };
+}
+
+export function updateBoxFactory(factory: BoxFactoryState, dt: number) {
+    for (const box of factory.boxes) {
+        updateBox(box, dt, factory.conveyorStartX, factory.conveyorEndX);
+    }
+
+    factory.boxes = factory.boxes.filter(box => box.x < factory.conveyorEndX);
+
+    factory.spawnTimer += dt;
+    if (factory.spawnTimer >= factory.spawnInterval) {
+        factory.spawnTimer -= factory.spawnInterval;
+
+        const laneIndex = Math.floor(Math.random() * 4);
+        const y = LANES_Y[laneIndex];
+        const box = createBox(factory.conveyorStartX, y, 20, 80);
+        factory.boxes.push(box);
+    }
+}
+
+export function renderBoxFactory(factory: BoxFactoryState, ctx: CanvasRenderingContext2D) {
+    for (const box of factory.boxes) {
+        renderBox(box, ctx);
+    }
+}
+```
+
+[⬆ Table of Contents](#toc)
+
 ## Page <a id="page"></a>
 
 ### Index <a id="index"></a>
@@ -530,8 +586,8 @@ import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
 import { Rect } from "./oop/rect";
 import { resolvePlayerRectCollisions } from "./collision";
-import { createBox, renderBox, updateBox, type BoxState } from "./box";
 import type { RectState } from "./rect";
+import { createBoxFactory, renderBoxFactory, updateBoxFactory, type BoxFactoryState } from "./box-factory";
 
 export type GameState = {
     renderer: Renderer;
@@ -541,10 +597,10 @@ export type GameState = {
     conveyorBelt: Rect;
     leftGate: Rect;
     rightGate: Rect;
-    boxes: BoxState[];
     colliders: RectState[];
     conveyorStartX: number;
     conveyorEndX: number;
+    boxFactory: BoxFactoryState;
 };
 
 export function createGame(
@@ -552,19 +608,13 @@ export function createGame(
     input: Input,
     audio: Audio
 ): GameState {
-    const boxes = [
-        createBox(960 - 250 - 50 - 10, 200),
-        createBox(960 - 250 - 50 - 10, 220),
-        createBox(960 - 250 - 50 - 10, 240),
-        createBox(960 - 250 - 50 - 10, 260)
-    ];
-
     const conveyorBelt = new Rect(960 - 350, 200, 700, 80, "blue");
     const leftGate = new Rect(960 - 250 - 100, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
     const rightGate = new Rect(960 + 250, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
 
     const conveyorStartX = leftGate.state.x + leftGate.state.width / 2;
     const conveyorEndX = rightGate.state.x + rightGate.state.width / 2;
+    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX, 1.0);
 
     return {
         renderer,
@@ -574,15 +624,15 @@ export function createGame(
         conveyorBelt,
         leftGate,
         rightGate,
-        boxes,
         colliders: [
             conveyorBelt.state,
             leftGate.state,
             rightGate.state,
-            ...boxes
+            ...boxFactory.boxes
         ],
         conveyorStartX,
-        conveyorEndX
+        conveyorEndX,
+        boxFactory
     };
 }
 
@@ -596,9 +646,7 @@ export function updateGame(
         state.audio.play("move");
     }
 
-    for (const box of state.boxes) {
-        updateBox(box, dt, state.conveyorStartX, state.conveyorEndX);
-    }
+    updateBoxFactory(state.boxFactory, dt);
 
     resolvePlayerRectCollisions(
         state.player.state,
@@ -614,9 +662,7 @@ export function renderGame(
     state.conveyorBelt.render(state.renderer.ctx);
     state.leftGate.render(state.renderer.ctx);
     state.rightGate.render(state.renderer.ctx);
-    for (const box of state.boxes) {
-        renderBox(box, state.renderer.ctx);
-    }
+    renderBoxFactory(state.boxFactory, state.renderer.ctx);
     state.player.render(
         state.renderer.ctx,
         alpha

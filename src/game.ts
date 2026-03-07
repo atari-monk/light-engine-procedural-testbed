@@ -2,8 +2,8 @@ import type { Renderer, Input, Audio } from "light-engine-procedural";
 import { Player } from "./oop/player";
 import { Rect } from "./oop/rect";
 import { resolvePlayerRectCollisions } from "./collision";
-import { createBox, renderBox, updateBox, type BoxState } from "./box";
 import type { RectState } from "./rect";
+import { createBoxFactory, renderBoxFactory, updateBoxFactory, type BoxFactoryState } from "./box-factory";
 
 export type GameState = {
     renderer: Renderer;
@@ -13,10 +13,10 @@ export type GameState = {
     conveyorBelt: Rect;
     leftGate: Rect;
     rightGate: Rect;
-    boxes: BoxState[];
     colliders: RectState[];
     conveyorStartX: number;
     conveyorEndX: number;
+    boxFactory: BoxFactoryState;
 };
 
 export function createGame(
@@ -24,19 +24,13 @@ export function createGame(
     input: Input,
     audio: Audio
 ): GameState {
-    const boxes = [
-        createBox(960 - 250 - 50 - 10, 200),
-        createBox(960 - 250 - 50 - 10, 220),
-        createBox(960 - 250 - 50 - 10, 240),
-        createBox(960 - 250 - 50 - 10, 260)
-    ];
-
     const conveyorBelt = new Rect(960 - 350, 200, 700, 80, "blue");
     const leftGate = new Rect(960 - 250 - 100, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
     const rightGate = new Rect(960 + 250, 200 - 10, 100, 100, "rgba(173, 216, 230, .5)");
 
     const conveyorStartX = leftGate.state.x + leftGate.state.width / 2;
     const conveyorEndX = rightGate.state.x + rightGate.state.width / 2;
+    const boxFactory = createBoxFactory(conveyorStartX, conveyorEndX, 1.0);
 
     return {
         renderer,
@@ -46,15 +40,15 @@ export function createGame(
         conveyorBelt,
         leftGate,
         rightGate,
-        boxes,
         colliders: [
             conveyorBelt.state,
             leftGate.state,
             rightGate.state,
-            ...boxes
+            ...boxFactory.boxes
         ],
         conveyorStartX,
-        conveyorEndX
+        conveyorEndX,
+        boxFactory
     };
 }
 
@@ -68,9 +62,7 @@ export function updateGame(
         state.audio.play("move");
     }
 
-    for (const box of state.boxes) {
-        updateBox(box, dt, state.conveyorStartX, state.conveyorEndX);
-    }
+    updateBoxFactory(state.boxFactory, dt);
 
     resolvePlayerRectCollisions(
         state.player.state,
@@ -86,9 +78,7 @@ export function renderGame(
     state.conveyorBelt.render(state.renderer.ctx);
     state.leftGate.render(state.renderer.ctx);
     state.rightGate.render(state.renderer.ctx);
-    for (const box of state.boxes) {
-        renderBox(box, state.renderer.ctx);
-    }
+    renderBoxFactory(state.boxFactory, state.renderer.ctx);
     state.player.render(
         state.renderer.ctx,
         alpha
